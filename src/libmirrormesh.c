@@ -295,7 +295,7 @@ int MIRRORMESH_mirror_cells(MMG5_pMesh mesh,int dim,int *nmir) {
           for ( i=0; i<3; ++i) {
             pttn->v[i] = mesh->point[ptt->v[i]+(imir+1)*(npcur)].tmp;
           }
-          if ( imir%2==1 ) {
+          if ( imir%2==0 ) {
             /* Reorientation */
             int tmp = pttn->v[2];
             pttn->v[2] = pttn->v[1];
@@ -328,7 +328,7 @@ int MIRRORMESH_mirror_cells(MMG5_pMesh mesh,int dim,int *nmir) {
         else {
           pan->a = mesh->point[pa->a+(imir+1)*(npcur)].tmp;
           pan->b = mesh->point[pa->b+(imir+1)*(npcur)].tmp;
-          if ( imir%2==1 ) {
+          if ( imir%2==0 ) {
             /* Reorientation */
             int tmp = pan->b;
             pan->b = pan->a;
