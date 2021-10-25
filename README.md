@@ -73,7 +73,7 @@ number of mirrors along each axis can be provided using the `-nx <nx>
 line apply 1 mirror along the x-axis, 2 mirrors along the y-axis and 5
 along the z-axis to the `input.mesh` mesh and saves the result in the `output.mesh` mesh:
 ```
-mirrormesh_o3 -nx 1 -ny 2 -nz 5 input.mesh output.mesh
+mirrormesh_O3 -nx 1 -ny 2 -nz 5 input.mesh output.mesh
 ```
 
 
