@@ -142,8 +142,8 @@ int MIRRORMESH_mirror_points(MMG5_pMesh mesh,int dim,
   }
 
   /* Reallocation of point array */
-  MMG5_ADD_MEM(mesh,(nmirtot*npinit-(mesh->npmax)) *sizeof(MMG5_Point),
-                   "larger point array",return 0);
+  /* MMG5_ADD_MEM(mesh,(nmirtot*npinit-(mesh->npmax)) *sizeof(MMG5_Point), */
+  /*                  "larger point array",return 0); */
 
   MMG5_SAFE_RECALLOC(mesh->point,(mesh->npmax+1),nmirtot*npinit+1,
                      MMG5_Point,"larger point array",return 0);
@@ -200,24 +200,24 @@ int MIRRORMESH_mirror_cells(MMG5_pMesh mesh,int dim,int *nmir) {
   }
 
   /* Reallocation of tetra */
-  MMG5_ADD_MEM(mesh,(nmirtot*neinit-(mesh->nemax))*sizeof(MMG5_Tetra),
-                   "larger tetra array",return 0);
+  /* MMG5_ADD_MEM(mesh,(nmirtot*neinit-(mesh->nemax))*sizeof(MMG5_Tetra), */
+  /*                  "larger tetra array",return 0); */
 
   MMG5_SAFE_RECALLOC(mesh->tetra,(mesh->nemax+1),nmirtot*neinit+1,
                      MMG5_Tetra,"larger tetra array",return 0);
   mesh->nemax = mesh->ne = nmirtot*neinit+1;
 
   /* Reallocation of triangles */
-  MMG5_ADD_MEM(mesh,(nmirtot*ntinit-(mesh->nt))*sizeof(MMG5_Tria),
-                   "larger triangle array",return 0);
+  /* MMG5_ADD_MEM(mesh,(nmirtot*ntinit-(mesh->nt))*sizeof(MMG5_Tria), */
+  /*                  "larger triangle array",return 0); */
 
   MMG5_SAFE_RECALLOC(mesh->tria,(mesh->nt+1),nmirtot*ntinit+1,
                      MMG5_Tria,"larger triangle array",return 0);
   mesh->nt = nmirtot*ntinit+1;
 
   /* Reallocation of edges */
-  MMG5_ADD_MEM(mesh,(nmirtot*nainit-(mesh->na))*sizeof(MMG5_Edge),
-                   "larger edge array",return 0);
+  /* MMG5_ADD_MEM(mesh,(nmirtot*nainit-(mesh->na))*sizeof(MMG5_Edge), */
+  /*                  "larger edge array",return 0); */
 
   MMG5_SAFE_RECALLOC(mesh->edge,(mesh->na+1),nmirtot*nainit+1,
                      MMG5_Edge,"larger edge array",return 0);
@@ -569,30 +569,38 @@ int MIRRORMESH_mirror(MMG5_pMesh mesh,int nx, int ny, int nz) {
   /* Tolerance over coordinates to consider a point as replicated */
   const double eps = 1e-14;
 
+  struct rusage usage;
+  double tu, ts, tt;
+
+  if(getrusage(RUSAGE_SELF, &usage)){
+    printf("getrusage failed: no resource usage data\n");
+  }else{
+    tu = (double)usage.ru_utime.tv_sec + 1e-6*usage.ru_utime.tv_usec;
+    ts = (double)usage.ru_stime.tv_sec + 1e-6*usage.ru_stime.tv_usec;
+    tt = tu+ts;
+    printf("memory usage (max resident set size) : %.3f GB\n",
+	   (double)usage.ru_maxrss/1024/1024);
+    printf("cputime : %.1f seconds (%.1f user, %.1f system)\n", tt, tu, ts);
+  }
+
   int ier = MIRRORMESH_mirror_points(mesh,dim,nmir,eps);
+
+
+  if(getrusage(RUSAGE_SELF, &usage)){
+    printf("getrusage failed: no resource usage data\n");
+  }else{
+    tu = (double)usage.ru_utime.tv_sec + 1e-6*usage.ru_utime.tv_usec;
+    ts = (double)usage.ru_stime.tv_sec + 1e-6*usage.ru_stime.tv_usec;
+    tt = tu+ts;
+    printf("memory usage (max resident set size) : %.3f GB\n",
+	   (double)usage.ru_maxrss/1024/1024);
+    printf("cputime : %.1f seconds (%.1f user, %.1f system)\n", tt, tu, ts);
+  }
 
   chrono(OFF,&(ctim[4]));
   printim(ctim[4].gdif,stim);
   if ( mesh->info.imprim > 0 )
     fprintf(stdout,"  -- PHASE 1 COMPLETED.     %s\n",stim);
-
-  /* Cells mirroring */
-  if ( mesh->info.imprim > 0 ) {
-    fprintf(stdout,"\n  -- PHASE 2 : ELEMENT MIRRORING\n");
-  }
-  chrono(ON,&(ctim[5]));
-
-  int iermesh = MIRRORMESH_mirror_cells(mesh,dim,nmir);
-  if ( iermesh < 0 ) {
-    fprintf(stderr,"  ## Error: unable to mirror the mesh.\n");
-    return MMG5_LOWFAILURE;
-  }
-
-  chrono(OFF,&(ctim[5]));
-  printim(ctim[5].gdif,stim);
-  if ( mesh->info.imprim > 0 )
-    fprintf(stdout,"  -- PHASE 2 COMPLETED.     %s\n",stim);
-
 
   /* Mesh compression */
   if ( mesh->info.imprim > 0 ) {
@@ -600,7 +608,7 @@ int MIRRORMESH_mirror(MMG5_pMesh mesh,int nx, int ny, int nz) {
   }
   chrono(ON,&(ctim[6]));
 
-  iermesh = MIRRORMESH_packMesh(mesh);
+  int iermesh = MIRRORMESH_packMesh(mesh);
   if ( iermesh < 0 ) {
     fprintf(stderr,"  ## Error: unable to pack the final mesh.\n");
     return MMG5_LOWFAILURE;
@@ -610,6 +618,23 @@ int MIRRORMESH_mirror(MMG5_pMesh mesh,int nx, int ny, int nz) {
   printim(ctim[6].gdif,stim);
   if ( mesh->info.imprim > 0 )
     fprintf(stdout,"  -- PHASE 3 COMPLETED.     %s\n",stim);
+
+  /* Cells mirroring */
+  if ( mesh->info.imprim > 0 ) {
+    fprintf(stdout,"\n  -- PHASE 2 : ELEMENT MIRRORING\n");
+  }
+  chrono(ON,&(ctim[5]));
+
+  iermesh = MIRRORMESH_mirror_cells(mesh,dim,nmir);
+  if ( iermesh < 0 ) {
+    fprintf(stderr,"  ## Error: unable to mirror the mesh.\n");
+    return MMG5_LOWFAILURE;
+  }
+
+  chrono(OFF,&(ctim[5]));
+  printim(ctim[5].gdif,stim);
+  if ( mesh->info.imprim > 0 )
+    fprintf(stdout,"  -- PHASE 2 COMPLETED.     %s\n",stim);
 
   return MMG5_SUCCESS;
 }
